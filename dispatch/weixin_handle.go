@@ -20,6 +20,10 @@ func (*WeixinServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 处理微信验证消息
 	if strings.Trim(r.URL.Path, " ") == "/" {
 		r.ParseForm()
-		fmt.Fprint(w, r.Form.Get("echostr"))
+		if r.Method == "GET" {
+			fmt.Fprint(w, r.Form.Get("echostr"))
+		} else if r.Method == "POST" {
+			log.Panicln("weixin post msg=", r.PostForm)
+		}
 	}
 }

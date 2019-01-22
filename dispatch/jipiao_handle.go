@@ -26,6 +26,7 @@ func (*JipiaoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else if r.URL.Path == "/api/jipiao/update_status" {
 
 	} else {
+		log.Println("not found ptah=", r.URL.Path)
 		w.WriteHeader(http.StatusNotFound)
 	}
 }
