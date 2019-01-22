@@ -15,6 +15,7 @@ import (
 func main() {
 
 	jipiaoHandle := dispatch.NewJipiaoHandle()
+	wexinHandle := dispatch.NewWeixinHandle()
 	serverMux := http.NewServeMux()
 	err := mylog.InitLog()
 	if err != nil {
@@ -32,6 +33,7 @@ func main() {
 		os.Exit(0)
 	}()
 	//添加url处理类
+	serverMux.Handle("/", wexinHandle)
 	serverMux.Handle("/api/jipiao/", jipiaoHandle)
 	log.Println("server start")
 	err = http.ListenAndServe(":8888", serverMux)
