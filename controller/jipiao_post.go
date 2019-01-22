@@ -60,16 +60,14 @@ func HandlePost(r *http.Request) []byte {
 
 	var cityExpect, errExpect = cityHandle(&(r.PostForm), "expect_city")
 	if errExpect != nil {
-		result = errHandle("期望出发城市填写错误", 2008)
-		return result
+		jipiao_info.expectCity = ""
 	} else {
 		jipiao_info.expectCity = *cityExpect
 	}
 
 	var cityEA, errEA = cityHandle(&(r.PostForm), "expect_arrive")
 	if errEA != nil {
-		result = errHandle("期望到达城市填写错误", 2008)
-		return result
+		jipiao_info.expectArrive = ""
 	} else {
 		jipiao_info.expectArrive = *cityEA
 	}
@@ -83,8 +81,7 @@ func HandlePost(r *http.Request) []byte {
 
 	var expectTime, errET = timeHandle(&(r.PostForm), "expect_time")
 	if errET != nil {
-		result = errHandle("期望出发时间填写错误", 2008)
-		return result
+		jipiao_info.expectTime = 0
 	} else {
 		jipiao_info.expectTime = expectTime
 	}
