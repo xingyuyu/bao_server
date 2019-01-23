@@ -2,6 +2,7 @@ package dispatch
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
@@ -23,7 +24,9 @@ func (*WeixinServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			fmt.Fprint(w, r.Form.Get("echostr"))
 		} else if r.Method == "POST" {
-			log.Panicln("weixin post msg=", r.PostForm)
+			r.ParseMultipartForm(1024)
+			body, _ := ioutil.ReadAll(r.Body)
+			log.Println("weixin post msg=", string(body))
 		}
 	}
 }
