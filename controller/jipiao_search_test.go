@@ -1,19 +1,18 @@
 package controller
 
 import (
-	"bao_server/db"
 	"log"
 	"testing"
 	"time"
 )
 
-func Test_InitDB(t *testing.T) {
-	if db.InitDB() { //try a unit test on function
-		t.Log("connect to db success") // 如果不是如预期的那么就报错
-	} else {
-		t.Error("connect to db success") //记录一些你期望记录的信息
-	}
-}
+// func Test_InitDB(t *testing.T) {
+// 	if db.InitDB() { //try a unit test on function
+// 		t.Log("connect to db success") // 如果不是如预期的那么就报错
+// 	} else {
+// 		t.Error("connect to db success") //记录一些你期望记录的信息
+// 	}
+// }
 
 func Test_SearchByExpectTime(t *testing.T) {
 	//getExpectTimeData(122355666)
@@ -45,7 +44,7 @@ func Test_ParseReq(t *testing.T) {
 }
 
 func Test_Time(t *testing.T) {
-	res, err := parseTime("02-3")
+	res, err := ParseTime("02-3")
 	if err != nil {
 		log.Println("xxx")
 

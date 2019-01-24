@@ -44,7 +44,7 @@ type SemanticsResult struct {
 
 func HandleSearch(reqBody *string) []byte {
 	weixinReceive := parseReqParam(*reqBody)
-	parseResult, err := parseUserSemantics(weixinReceive.Content.Value)
+	parseResult, err := parseUserSemantics(weixinReceive.Content.Value, weixinReceive.FromUserName.Value)
 	var msg string
 	var searchInfo []JipiaoInfo
 	if err == nil {
@@ -52,10 +52,10 @@ func HandleSearch(reqBody *string) []byte {
 		case "do_me_search":
 			log.Println("do_me_search,weixinId=", parseResult.info.weixinId)
 			myInfo := getMeInfoData(parseResult.info.weixinId)
-			if myInfo != nil {
+			if myInfo == nil {
 				msg = "没查到您的相关信息，请填写自己的机票信息哦"
 			} else {
-				searchInfo = getAllInfoData(parseResult.info.selfCity, parseResult.info.selfArrive, parseResult.info.selfTime)
+				searchInfo = getAllInfoData(myInfo.selfCity, myInfo.selfArrive, myInfo.selfTime)
 			}
 			break
 		case "do_expect_city_search":
@@ -89,16 +89,18 @@ func HandleSearch(reqBody *string) []byte {
 
 func handleDbRowData(rows *sql.Rows) []JipiaoInfo {
 	infos := make([]JipiaoInfo, 0)
-	for rows.Next() {
-		var item JipiaoInfo
-		rows.Scan(&item.liaotianbaoID, &item.selfCity, &item.selfArrive, &item.selfTime)
-		infos = append(infos, item)
+	if rows != nil {
+		for rows.Next() {
+			var item JipiaoInfo
+			rows.Scan(&item.liaotianbaoID, &item.selfCity, &item.selfArrive, &item.selfTime)
+			infos = append(infos, item)
+		}
 	}
 	return infos
 }
 
 func getExpectTimeData(expectTime uint64) []JipiaoInfo {
-	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_time = %d"
+	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_time = %d order by update_time"
 	sql := fmt.Sprintf(sqlFormat, expectTime)
 	log.Println("search by expect time sql=", sql)
 	rows, err := db.Select(&sql)
@@ -109,7 +111,7 @@ func getExpectTimeData(expectTime uint64) []JipiaoInfo {
 }
 
 func getExpectCityData(city string) []JipiaoInfo {
-	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city = %s"
+	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city = '%s' order by update_time"
 	sql := fmt.Sprintf(sqlFormat, city)
 	log.Println("search by expect city sql=", sql)
 	rows, err := db.Select(&sql)
@@ -120,7 +122,7 @@ func getExpectCityData(city string) []JipiaoInfo {
 }
 
 func getExpectArriveData(city string) []JipiaoInfo {
-	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city = %s"
+	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city = '%s' order by update_time"
 	sql := fmt.Sprintf(sqlFormat, city)
 	log.Println("search by expect city sql=", sql)
 	rows, err := db.Select(&sql)
@@ -131,7 +133,7 @@ func getExpectArriveData(city string) []JipiaoInfo {
 }
 
 func getExpectCityAndArriveData(city string, arraive string) []JipiaoInfo {
-	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city = %s and self_arrive = %s"
+	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city = '%s' and self_arrive = '%s' order by update_time"
 	sql := fmt.Sprintf(sqlFormat, city, arraive)
 	log.Println("search by getExpectCityAndArriveData=", sql)
 	rows, err := db.Select(&sql)
@@ -142,7 +144,7 @@ func getExpectCityAndArriveData(city string, arraive string) []JipiaoInfo {
 }
 
 func getAllInfoData(city string, arraive string, time uint64) []JipiaoInfo {
-	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city = %s and self_arrive = %s and self_time=%d"
+	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city = '%s' and self_arrive = '%s' and self_time=%d order by update_time"
 	sql := fmt.Sprintf(sqlFormat, city, arraive, time)
 	log.Println("search by getAllInfoData=", sql)
 	rows, err := db.Select(&sql)
@@ -153,14 +155,17 @@ func getAllInfoData(city string, arraive string, time uint64) []JipiaoInfo {
 }
 
 func getMeInfoData(weixinID string) *JipiaoInfo {
-	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city weixin_id = %s"
+	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where weixin_id = '%s'"
 	sql := fmt.Sprintf(sqlFormat, weixinID)
 	log.Println("search by getMeInfoData=", sql)
 	rows, err := db.Select(&sql)
-	if err == nil {
-		return &handleDbRowData(rows)[0]
+	if !rows.Next() || err != nil {
+		return nil
 	}
-	return nil
+	var item JipiaoInfo
+	rows.Scan(&item.liaotianbaoID, &item.selfCity, &item.selfArrive, &item.selfTime)
+	log.Println("result=", result)
+	return &item
 }
 
 //格式化后格式如下
@@ -189,7 +194,7 @@ func parseReqParam(content string) *WeiXinReceiveMsg {
 	return &receiveMsg
 }
 
-func parseUserSemantics(semantics string) (*SemanticsResult, error) {
+func parseUserSemantics(semantics string, weixinID string) (*SemanticsResult, error) {
 	splitArr := strings.Split(semantics, " ")
 	var result SemanticsResult
 	if len(semantics) == 0 {
@@ -201,8 +206,9 @@ func parseUserSemantics(semantics string) (*SemanticsResult, error) {
 		if len(splitArr) == 1 && (semantics == "我的" || semantics == "我") {
 			result.action = "do_me_search"
 			result.info.selfCity = splitArr[0]
+			result.info.weixinId = weixinID
 		} else if len(splitArr) == 1 && (strings.Contains(semantics, "-")) {
-			timeStamp, err := parseTime(semantics)
+			timeStamp, err := ParseTime(semantics)
 			if err != nil {
 				return &result, errors.New("您输入的查询时间不对")
 			}
@@ -219,7 +225,7 @@ func parseUserSemantics(semantics string) (*SemanticsResult, error) {
 			result.action = "do_all_search"
 			result.info.selfCity = splitArr[0]
 			result.info.selfArrive = splitArr[1]
-			timeStamp, err := parseTime(splitArr[2])
+			timeStamp, err := ParseTime(splitArr[2])
 			if err != nil {
 				return &result, errors.New("您输入的查询时间不对")
 			}
@@ -231,8 +237,9 @@ func parseUserSemantics(semantics string) (*SemanticsResult, error) {
 
 func formatTime(timestamp uint64) string {
 	tmObj := time.Unix(int64(timestamp), 0)
-	result := tmObj.Format("01-01")
-	return result
+	result := tmObj.Format("2006-01-02 15:04:05")
+	tempArr := strings.Split(result, " ")
+	return tempArr[0]
 }
 
 func formatWeixinResponse(weixinRes *WeiXinResponseMsg) *string {
@@ -260,7 +267,7 @@ func contructWeiXinResponse(to string, from string, msg string) *WeiXinResponseM
 	return &weixinResMsg
 }
 
-func parseTime(inputTime string) (int64, error) {
+func ParseTime(inputTime string) (int64, error) {
 	format := "2019-%s 00:00:00"
 	timeStr := fmt.Sprintf(format, inputTime)
 	loc, _ := time.LoadLocation("Local")

@@ -13,7 +13,6 @@ import (
 )
 
 func main() {
-
 	jipiaoHandle := dispatch.NewJipiaoHandle()
 	wexinHandle := dispatch.NewWeixinHandle()
 	serverMux := http.NewServeMux()
@@ -32,6 +31,11 @@ func main() {
 		mylog.CloseLog()
 		os.Exit(0)
 	}()
+	err = db.ConnDb()
+	if err != nil {
+		log.Panicln("db init fail")
+	}
+	log.SetFlags(log.LstdFlags | log.Lshortfile | log.LUTC)
 	//添加url处理类
 	serverMux.Handle("/", wexinHandle)
 	serverMux.Handle("/api/jipiao/", jipiaoHandle)

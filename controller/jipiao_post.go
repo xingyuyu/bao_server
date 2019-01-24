@@ -29,11 +29,7 @@ var result []byte
 
 //处理机票提交信息
 func HandlePost(r *http.Request) []byte {
-	err := db.ConnDb()
-	if err != nil {
-		result = errHandle("server error", -1)
-		return result
-	}
+
 	r.ParseForm()
 	log.Println("start handle post")
 	log.Println("Postform=", r.PostForm)

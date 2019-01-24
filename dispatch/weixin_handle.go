@@ -28,9 +28,12 @@ func (*WeixinServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			r.ParseMultipartForm(1024)
 			body, _ := ioutil.ReadAll(r.Body)
 			bodyStr := string(body)
+			log.Println("weixinXMl=", bodyStr)
 			xmlRet := controller.HandleSearch(&bodyStr)
 			log.Println("weixin post msg=", string(body))
-			sendResult, err := fmt.Fprint(w, xmlRet)
+			log.Println("send to clenit=", string(xmlRet))
+			w.Header().Set("Content-Type", "application/xml")
+			sendResult, err := fmt.Fprint(w, string(xmlRet))
 			if err != nil {
 				log.Println("send to weixin fail")
 			} else {
