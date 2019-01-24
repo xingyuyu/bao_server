@@ -42,9 +42,50 @@ type SemanticsResult struct {
 	info   JipiaoInfo
 }
 
-// func HandleSearch(r *http.Request) []byte {
-
-// }
+func HandleSearch(reqBody *string) []byte {
+	weixinReceive := parseReqParam(*reqBody)
+	parseResult, err := parseUserSemantics(weixinReceive.Content.Value)
+	var msg string
+	var searchInfo []JipiaoInfo
+	if err == nil {
+		switch parseResult.action {
+		case "do_me_search":
+			log.Println("do_me_search,weixinId=", parseResult.info.weixinId)
+			myInfo := getMeInfoData(parseResult.info.weixinId)
+			if myInfo != nil {
+				msg = "没查到您的相关信息，请填写自己的机票信息哦"
+			} else {
+				searchInfo = getAllInfoData(parseResult.info.selfCity, parseResult.info.selfArrive, parseResult.info.selfTime)
+			}
+			break
+		case "do_expect_city_search":
+			log.Println("getExpectCityData,info=", parseResult)
+			searchInfo = getExpectCityData(parseResult.info.selfCity)
+			break
+		case "do_expect_time":
+			log.Println("getExpectTimeData info=", parseResult)
+			searchInfo = getExpectTimeData(parseResult.info.selfTime)
+			break
+		case "do_city_search":
+			log.Println("do_city_search info=", parseResult)
+			searchInfo = getExpectCityAndArriveData(parseResult.info.selfCity, parseResult.info.selfArrive)
+			break
+		case "do_all_search":
+			log.Println("do_all_search info=", parseResult)
+			searchInfo = getAllInfoData(parseResult.info.selfCity, parseResult.info.selfArrive, parseResult.info.selfTime)
+		}
+	} else {
+		msg = "请正确提交信息"
+	}
+	if len(searchInfo) == 0 {
+		msg = "sorry,没查到相关航班信息"
+	} else {
+		msg = fomatData(searchInfo)
+	}
+	resMsg := contructWeiXinResponse(weixinReceive.FromUserName.Value, weixinReceive.ToUserName.Value, msg)
+	xmlResult := formatWeixinResponse(resMsg)
+	return []byte(*xmlResult)
+}
 
 func handleDbRowData(rows *sql.Rows) []JipiaoInfo {
 	infos := make([]JipiaoInfo, 0)
@@ -111,6 +152,17 @@ func getAllInfoData(city string, arraive string, time uint64) []JipiaoInfo {
 	return nil
 }
 
+func getMeInfoData(weixinID string) *JipiaoInfo {
+	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city weixin_id = %s"
+	sql := fmt.Sprintf(sqlFormat, weixinID)
+	log.Println("search by getMeInfoData=", sql)
+	rows, err := db.Select(&sql)
+	if err == nil {
+		return &handleDbRowData(rows)[0]
+	}
+	return nil
+}
+
 //格式化后格式如下
 // 聊天宝账户:xxxx
 // 出发城市:xx
@@ -154,7 +206,7 @@ func parseUserSemantics(semantics string) (*SemanticsResult, error) {
 			if err != nil {
 				return &result, errors.New("您输入的查询时间不对")
 			}
-			result.action = "do_expect_city"
+			result.action = "do_expect_time"
 			result.info.selfTime = uint64(timeStamp)
 		} else if len(splitArr) == 1 {
 			result.action = "do_expect_city_search"
@@ -183,13 +235,29 @@ func formatTime(timestamp uint64) string {
 	return result
 }
 
-func formatWeixinResponse(weixinRes *WeiXinResponseMsg) string {
+func formatWeixinResponse(weixinRes *WeiXinResponseMsg) *string {
 	output, err := xml.MarshalIndent(*weixinRes, "", "")
+	retStr := ""
 	if err != nil {
 		log.Println("encode xml fail")
-		return ""
+		return &retStr
 	}
-	return string(output)
+	retStr = string(output)
+	return &retStr
+}
+
+func contructWeiXinResponse(to string, from string, msg string) *WeiXinResponseMsg {
+	var weixinResMsg WeiXinResponseMsg
+	toCData := &weixinResMsg.ToUserName
+	toCData.Value = to
+	fromCData := &weixinResMsg.FromUserName
+	fromCData.Value = from
+	msgCData := &weixinResMsg.Content
+	msgCData.Value = msg
+	msgTypeCData := &weixinResMsg.MsgType
+	msgTypeCData.Value = "text"
+	weixinResMsg.CreateTime = uint64(time.Now().Unix())
+	return &weixinResMsg
 }
 
 func parseTime(inputTime string) (int64, error) {

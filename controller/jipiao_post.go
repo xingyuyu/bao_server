@@ -120,8 +120,7 @@ func timeHandle(postForm *url.Values, filedName string) (uint64, error) {
 }
 
 func constructInserSql(info *JipiaoInfo) string {
-	unix_time := time.Now().UnixNano()
-	timestamp := unix_time / 1000000000
+	timestamp := time.Now().Unix()
 	sql := fmt.Sprintf("insert into jipiao_exchange(liaotianbao_id, weixin_id,self_city, self_arrive,self_time,expect_city,expect_arrive,expect_time,update_time,status) values('%s', '%s','%s', '%s', %d, '%s', '%s', %d, %d, 0) ON DUPLICATE KEY UPDATE liaotianbao_id='%s', weixin_id='%s', self_city='%s',self_arrive='%s',self_time=%d,expect_city='%s',expect_arrive='%s',expect_time=%d,update_time=%d;",
 		info.liaotianbaoID,
 		info.weixinId,
