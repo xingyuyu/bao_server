@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	userName = "root"
-	password = ""
+	userName = "work"
+	password = "mhxzkhl"
 	ip       = "127.0.0.1"
-	port     = "3306"
+	port     = "8021"
 	dbName   = "exchange_db"
 )
 
