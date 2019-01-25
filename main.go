@@ -14,7 +14,7 @@ import (
 
 func main() {
 	jipiaoHandle := dispatch.NewJipiaoHandle()
-	//wexinHandle := dispatch.NewWeixinHandle()
+	wexinHandle := dispatch.NewWeixinHandle()
 	commonHandle := dispatch.NewCommonHandle()
 	serverMux := http.NewServeMux()
 	err := mylog.InitLog()
@@ -38,7 +38,7 @@ func main() {
 	}
 	log.SetFlags(log.LstdFlags | log.Lshortfile | log.LUTC)
 	//添加url处理类
-	//serverMux.Handle("/", wexinHandle)
+	serverMux.Handle("/", wexinHandle)
 	serverMux.Handle("/api/jipiao/", jipiaoHandle)
 	serverMux.Handle("/api/common/", commonHandle)
 	log.Println("server start")

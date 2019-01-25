@@ -182,6 +182,7 @@ func fomatData(infos []JipiaoInfo) string {
 		resulSlice = append(resulSlice, tempStr)
 	}
 	result := strings.Join(resulSlice, "\n")
+	result = strings.Trim(result, "\n")
 	return result
 }
 
