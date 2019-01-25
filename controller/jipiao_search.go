@@ -83,7 +83,11 @@ func HandleSearch(reqBody *string) []byte {
 		msg = "请正确提交信息"
 	}
 	if parseResult.action == "do_wurenji_search" {
-		msg = formatCommonData(commonInfo)
+		if len(commonInfo) == 0 {
+			msg = "sorry，没有查询到与您相关的无人机信息"
+		} else {
+			msg = formatCommonData(commonInfo)
+		}
 	} else {
 		if len(searchInfo) == 0 {
 			msg = "sorry,没查到相关航班信息"
@@ -262,10 +266,10 @@ func parseUserSemantics(semantics string, weixinID string) (*SemanticsResult, er
 		} else if len(splitArr) == 1 {
 			result.action = "do_expect_city_search"
 			result.info.selfCity = splitArr[0]
-		} else if len(splitArr) == 2 {
-			result.action = "do_city_search"
-			result.info.selfCity = splitArr[0]
-			result.info.selfArrive = splitArr[1]
+		} else if len(splitArr) == 2 && splitArr[0] == "无人机" {
+			result.action = "do_wurenji_search"
+			result.common_info.expectAttr = splitArr[1]
+			result.common_info.huodongType = 0
 		} else if len(splitArr) == 3 {
 			result.action = "do_all_search"
 			result.info.selfCity = splitArr[0]
@@ -275,10 +279,10 @@ func parseUserSemantics(semantics string, weixinID string) (*SemanticsResult, er
 				return &result, errors.New("您输入的查询时间不对")
 			}
 			result.info.selfTime = uint64(timeStamp)
-		} else if len(splitArr) == 2 && splitArr[0] == "无人机" {
-			result.action = "do_wurenji_search"
-			result.common_info.expectAttr = splitArr[1]
-			result.common_info.huodongType = 0
+		} else if len(splitArr) == 2 {
+			result.action = "do_city_search"
+			result.info.selfCity = splitArr[0]
+			result.info.selfArrive = splitArr[1]
 		}
 		return &result, nil
 	}
