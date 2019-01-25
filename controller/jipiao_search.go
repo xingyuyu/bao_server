@@ -193,9 +193,9 @@ func getMeInfoData(weixinID string) *JipiaoInfo {
 	return &item
 }
 
-func getWurenjiInfo(privoce string) []CommonInfo {
-	sqlFormat := "select liaotianbao_id,weixin_id,self_attr,expect_attr from common_exchange where huodong_type = 0 and self_attr = '%s' limit 20;"
-	sql := fmt.Sprintf(sqlFormat, privoce)
+func getWurenjiInfo(self string, expect string) []CommonInfo {
+	sqlFormat := "select liaotianbao_id,weixin_id,self_attr,expect_attr from common_exchange where huodong_type = 0 and self_attr = '%s' and expect_attr = '%s' limit 20;"
+	sql := fmt.Sprintf(sqlFormat, expect, self)
 	log.Println("search by getMeInfoData=", sql)
 	rows, err := db.Select(&sql)
 	if err == nil {
@@ -266,9 +266,10 @@ func parseUserSemantics(semantics string, weixinID string) (*SemanticsResult, er
 		} else if len(splitArr) == 1 {
 			result.action = "do_expect_city_search"
 			result.info.selfCity = splitArr[0]
-		} else if len(splitArr) == 2 && splitArr[0] == "无人机" {
+		} else if len(splitArr) == 3 && splitArr[0] == "无人机" {
 			result.action = "do_wurenji_search"
-			result.common_info.expectAttr = splitArr[1]
+			result.common_info.selfAttr = splitArr[1]
+			result.common_info.expectAttr = splitArr[2]
 			result.common_info.huodongType = 0
 		} else if len(splitArr) == 3 {
 			result.action = "do_all_search"
