@@ -38,8 +38,9 @@ type WeiXinResponseMsg struct {
 
 //用户发送语义解析结构
 type SemanticsResult struct {
-	action string
-	info   JipiaoInfo
+	action      string
+	info        JipiaoInfo
+	common_info CommonInfo
 }
 
 func HandleSearch(reqBody *string) []byte {
@@ -47,6 +48,7 @@ func HandleSearch(reqBody *string) []byte {
 	parseResult, err := parseUserSemantics(weixinReceive.Content.Value, weixinReceive.FromUserName.Value)
 	var msg string
 	var searchInfo []JipiaoInfo
+	var commonInfo []CommonInfo
 	if err == nil {
 		switch parseResult.action {
 		case "do_me_search":
@@ -73,14 +75,21 @@ func HandleSearch(reqBody *string) []byte {
 		case "do_all_search":
 			log.Println("do_all_search info=", parseResult)
 			searchInfo = getAllInfoData(parseResult.info.selfCity, parseResult.info.selfArrive, parseResult.info.selfTime)
+		case "do_wurenji_search":
+			log.Println("do_wurenji_search=", parseResult)
+			commonInfo = getWurenjiInfo(parseResult.common_info.expectAttr)
 		}
 	} else {
 		msg = "请正确提交信息"
 	}
-	if len(searchInfo) == 0 {
-		msg = "sorry,没查到相关航班信息"
+	if parseResult.action == "do_wurenji_search" {
+		msg = formatCommonData(commonInfo)
 	} else {
-		msg = fomatData(searchInfo)
+		if len(searchInfo) == 0 {
+			msg = "sorry,没查到相关航班信息"
+		} else {
+			msg = fomatData(searchInfo)
+		}
 	}
 	resMsg := contructWeiXinResponse(weixinReceive.FromUserName.Value, weixinReceive.ToUserName.Value, msg)
 	xmlResult := formatWeixinResponse(resMsg)
@@ -93,6 +102,18 @@ func handleDbRowData(rows *sql.Rows) []JipiaoInfo {
 		for rows.Next() {
 			var item JipiaoInfo
 			rows.Scan(&item.liaotianbaoID, &item.selfCity, &item.selfArrive, &item.selfTime)
+			infos = append(infos, item)
+		}
+	}
+	return infos
+}
+
+func handleDbCommonRowData(rows *sql.Rows) []CommonInfo {
+	infos := make([]CommonInfo, 0)
+	if rows != nil {
+		for rows.Next() {
+			var item CommonInfo
+			rows.Scan(&item.liaotianbaoID, &item.weixinId, &item.selfAttr, &item.expectAttr)
 			infos = append(infos, item)
 		}
 	}
@@ -168,6 +189,17 @@ func getMeInfoData(weixinID string) *JipiaoInfo {
 	return &item
 }
 
+func getWurenjiInfo(privoce string) []CommonInfo {
+	sqlFormat := "select liaotianbao_id,weixin_id,self_attr,expect_attr from common_exchange where huodong_type = 0 and self_attr = '%s' limit 20;"
+	sql := fmt.Sprintf(sqlFormat, privoce)
+	log.Println("search by getMeInfoData=", sql)
+	rows, err := db.Select(&sql)
+	if err == nil {
+		return handleDbCommonRowData(rows)
+	}
+	return nil
+}
+
 //格式化后格式如下
 // 聊天宝账户:xxxx
 // 出发城市:xx
@@ -179,6 +211,18 @@ func fomatData(infos []JipiaoInfo) string {
 	resulSlice := make([]string, len(infos))
 	for _, item := range infos {
 		tempStr := fmt.Sprintf(format, item.liaotianbaoID, item.selfCity, item.selfArrive, formatTime(item.selfTime))
+		resulSlice = append(resulSlice, tempStr)
+	}
+	result := strings.Join(resulSlice, "\n")
+	result = strings.Trim(result, "\n")
+	return result
+}
+
+func formatCommonData(infos []CommonInfo) string {
+	format := "聊天宝账户:%s"
+	resulSlice := make([]string, len(infos))
+	for _, item := range infos {
+		tempStr := fmt.Sprintf(format, item.liaotianbaoID)
 		resulSlice = append(resulSlice, tempStr)
 	}
 	result := strings.Join(resulSlice, "\n")
@@ -231,6 +275,10 @@ func parseUserSemantics(semantics string, weixinID string) (*SemanticsResult, er
 				return &result, errors.New("您输入的查询时间不对")
 			}
 			result.info.selfTime = uint64(timeStamp)
+		} else if len(splitArr) == 2 && splitArr[0] == "无人机" {
+			result.action = "do_wurenji_search"
+			result.common_info.expectAttr = splitArr[1]
+			result.common_info.huodongType = 0
 		}
 		return &result, nil
 	}
