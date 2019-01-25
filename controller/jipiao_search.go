@@ -77,7 +77,7 @@ func HandleSearch(reqBody *string) []byte {
 			searchInfo = getAllInfoData(parseResult.info.selfCity, parseResult.info.selfArrive, parseResult.info.selfTime)
 		case "do_wurenji_search":
 			log.Println("do_wurenji_search=", parseResult)
-			commonInfo = getWurenjiInfo(parseResult.common_info.expectAttr)
+			commonInfo = getWurenjiInfo(parseResult.common_info.selfAttr, parseResult.common_info.expectAttr)
 		}
 	} else {
 		msg = "请正确提交信息"
