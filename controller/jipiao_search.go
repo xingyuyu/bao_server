@@ -100,7 +100,7 @@ func handleDbRowData(rows *sql.Rows) []JipiaoInfo {
 }
 
 func getExpectTimeData(expectTime uint64) []JipiaoInfo {
-	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_time = %d order by update_time"
+	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_time = %d order by update_time limit 20"
 	sql := fmt.Sprintf(sqlFormat, expectTime)
 	log.Println("search by expect time sql=", sql)
 	rows, err := db.Select(&sql)
@@ -111,7 +111,7 @@ func getExpectTimeData(expectTime uint64) []JipiaoInfo {
 }
 
 func getExpectCityData(city string) []JipiaoInfo {
-	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city = '%s' order by update_time"
+	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city = '%s' and self_time > 0 order by update_time limit 20 "
 	sql := fmt.Sprintf(sqlFormat, city)
 	log.Println("search by expect city sql=", sql)
 	rows, err := db.Select(&sql)
@@ -133,7 +133,7 @@ func getExpectArriveData(city string) []JipiaoInfo {
 }
 
 func getExpectCityAndArriveData(city string, arraive string) []JipiaoInfo {
-	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city = '%s' and self_arrive = '%s' order by update_time"
+	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city = '%s' and self_arrive = '%s' order by update_time limit 20"
 	sql := fmt.Sprintf(sqlFormat, city, arraive)
 	log.Println("search by getExpectCityAndArriveData=", sql)
 	rows, err := db.Select(&sql)
@@ -144,7 +144,7 @@ func getExpectCityAndArriveData(city string, arraive string) []JipiaoInfo {
 }
 
 func getAllInfoData(city string, arraive string, time uint64) []JipiaoInfo {
-	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city = '%s' and self_arrive = '%s' and self_time=%d order by update_time"
+	sqlFormat := "select liaotianbao_id,self_city,self_arrive,self_time from jipiao_exchange where self_city = '%s' and self_arrive = '%s' and self_time=%d order by update_time limit 20"
 	sql := fmt.Sprintf(sqlFormat, city, arraive, time)
 	log.Println("search by getAllInfoData=", sql)
 	rows, err := db.Select(&sql)
