@@ -237,6 +237,9 @@ func parseUserSemantics(semantics string, weixinID string) (*SemanticsResult, er
 }
 
 func formatTime(timestamp uint64) string {
+	if timestamp == 0 {
+		return "暂无填写出发时间"
+	}
 	tmObj := time.Unix(int64(timestamp), 0)
 	result := tmObj.Format("2006-01-02 15:04:05")
 	tempArr := strings.Split(result, " ")
