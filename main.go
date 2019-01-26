@@ -22,12 +22,11 @@ func main() {
 		fmt.Println("init log fail")
 	}
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 	//注册关闭服务信号
 	go func() {
 		sig := <-sigs
-		fmt.Println("signal stop server")
-		fmt.Println(sig)
+		fmt.Println("signal stop server,sig=", sig)
 		db.Close()
 		mylog.CloseLog()
 		os.Exit(0)
