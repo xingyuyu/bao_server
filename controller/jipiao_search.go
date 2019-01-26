@@ -49,15 +49,23 @@ func HandleSearch(reqBody *string) []byte {
 	var msg string
 	var searchInfo []JipiaoInfo
 	var commonInfo []CommonInfo
+	var meWurenjiInfo []CommonInfo
+	var meSongshuInfo []CommonInfo
+	var meDianziyanInfo []CommonInfo
+
 	if err == nil {
 		switch parseResult.action {
 		case "do_me_search":
 			log.Println("do_me_search,weixinId=", parseResult.info.weixinId)
 			myInfo := getMeInfoData(parseResult.info.weixinId)
+			myCommonInfo := getMeCommonInfoData(parseResult.info.weixinId)
 			if myInfo == nil {
-				msg = "没查到您的相关信息，请填写自己的机票信息哦"
+				msg = "没查询到您相关的活动信息"
 			} else {
 				searchInfo = getAllInfoData(myInfo.selfCity, myInfo.selfArrive, myInfo.selfTime)
+				meWurenjiInfo = getWurenjiInfo(myCommonInfo[0].selfAttr, myCommonInfo[0].expectAttr)
+				meSongshuInfo = getSongshuInfo(myCommonInfo[1].selfAttr, myCommonInfo[0].expectAttr)
+				meDianziyanInfo = getDianziyanInfo(myCommonInfo[1].selfAttr, myCommonInfo[0].expectAttr)
 			}
 			break
 		case "do_expect_city_search":
@@ -75,9 +83,19 @@ func HandleSearch(reqBody *string) []byte {
 		case "do_all_search":
 			log.Println("do_all_search info=", parseResult)
 			searchInfo = getAllInfoData(parseResult.info.selfCity, parseResult.info.selfArrive, parseResult.info.selfTime)
+			break
 		case "do_wurenji_search":
 			log.Println("do_wurenji_search=", parseResult)
 			commonInfo = getWurenjiInfo(parseResult.common_info.selfAttr, parseResult.common_info.expectAttr)
+			break
+		case "do_dianziyan_search":
+			log.Println("do_dianziyan_search=", parseResult)
+			commonInfo = getWurenjiInfo(parseResult.common_info.selfAttr, parseResult.common_info.expectAttr)
+			break
+		case "do_songshu_search":
+			log.Println("do_songshu_search=", parseResult)
+			commonInfo = getWurenjiInfo(parseResult.common_info.selfAttr, parseResult.common_info.expectAttr)
+			break
 		}
 	} else {
 		msg = "请正确提交信息"
@@ -88,6 +106,25 @@ func HandleSearch(reqBody *string) []byte {
 		} else {
 			msg = formatCommonData(commonInfo)
 		}
+	} else if parseResult.action == "do_dianziyan_search" {
+		if len(commonInfo) == 0 {
+			msg = "sorry，没有查询到与您相关的电子烟信息"
+		} else {
+			msg = formatCommonData(commonInfo)
+		}
+	} else if parseResult.action == "do_songshu_search" {
+		if len(commonInfo) == 0 {
+			msg = "sorry，没有查询到与您相关的三只松鼠信息"
+		} else {
+			msg = formatCommonData(commonInfo)
+		}
+	} else if parseResult.action == "do_me_search" {
+		jipiaoMsg := fomatData(searchInfo)
+		wurenjiMsg := formatCommonData(meWurenjiInfo)
+		dianziyanMsg := formatCommonData(meDianziyanInfo)
+		songshuMsg := formatCommonData(meSongshuInfo)
+		msgFormat := "为您查询到得机票信息如下:\n%s\n为您查询到的无人机信息如下:\n%s\n为你查询到的电子烟信息如下:\n%s\n为您查询到的三只松鼠信息如下:\n%s\n"
+		msg = fmt.Sprintf(msgFormat, jipiaoMsg, wurenjiMsg, dianziyanMsg, songshuMsg)
 	} else {
 		if len(searchInfo) == 0 {
 			msg = "sorry,没查到相关航班信息"
@@ -193,8 +230,47 @@ func getMeInfoData(weixinID string) *JipiaoInfo {
 	return &item
 }
 
+func getMeCommonInfoData(weixinID string) map[int]CommonInfo {
+	sqlFormat := "select liaotianbao_id,weixin_id,self_attr,expect_attr,huodong_type from common_exchange where weixin_id = '%s'"
+	sql := fmt.Sprintf(sqlFormat, weixinID)
+	log.Println("search by getMeCommonData=", sql)
+	rows, err := db.Select(&sql)
+	if !rows.Next() || err != nil {
+		return nil
+	}
+	var resultMap map[int]CommonInfo
+	for rows.Next() {
+		var item CommonInfo
+		rows.Scan(&item.liaotianbaoID, &item.weixinId, &item.selfAttr, &item.expectAttr, &item.huodongType)
+		resultMap[item.huodongType] = item
+	}
+	return resultMap
+}
+
 func getWurenjiInfo(self string, expect string) []CommonInfo {
 	sqlFormat := "select liaotianbao_id,weixin_id,self_attr,expect_attr from common_exchange where huodong_type = 0 and self_attr = '%s' and expect_attr = '%s' limit 20;"
+	sql := fmt.Sprintf(sqlFormat, expect, self)
+	log.Println("search by getMeInfoData=", sql)
+	rows, err := db.Select(&sql)
+	if err == nil {
+		return handleDbCommonRowData(rows)
+	}
+	return nil
+}
+
+func getSongshuInfo(self string, expect string) []CommonInfo {
+	sqlFormat := "select liaotianbao_id,weixin_id,self_attr,expect_attr from common_exchange where huodong_type = 1 and self_attr = '%s' and expect_attr = '%s' limit 20;"
+	sql := fmt.Sprintf(sqlFormat, expect, self)
+	log.Println("search by getMeInfoData=", sql)
+	rows, err := db.Select(&sql)
+	if err == nil {
+		return handleDbCommonRowData(rows)
+	}
+	return nil
+}
+
+func getDianziyanInfo(self string, expect string) []CommonInfo {
+	sqlFormat := "select liaotianbao_id,weixin_id,self_attr,expect_attr from common_exchange where huodong_type = 2 and self_attr = '%s' and expect_attr = '%s' limit 20;"
 	sql := fmt.Sprintf(sqlFormat, expect, self)
 	log.Println("search by getMeInfoData=", sql)
 	rows, err := db.Select(&sql)
@@ -271,6 +347,16 @@ func parseUserSemantics(semantics string, weixinID string) (*SemanticsResult, er
 			result.common_info.selfAttr = splitArr[1]
 			result.common_info.expectAttr = splitArr[2]
 			result.common_info.huodongType = 0
+		} else if len(splitArr) == 3 && splitArr[0] == "电子烟" {
+			result.action = "do_dianziyan_search"
+			result.common_info.selfAttr = splitArr[1]
+			result.common_info.expectAttr = splitArr[2]
+			result.common_info.huodongType = 2
+		} else if len(splitArr) == 3 && splitArr[0] == "三只松鼠" {
+			result.action = "do_songshu_search"
+			result.common_info.selfAttr = splitArr[1]
+			result.common_info.expectAttr = splitArr[2]
+			result.common_info.huodongType = 1
 		} else if len(splitArr) == 3 {
 			result.action = "do_all_search"
 			result.info.selfCity = splitArr[0]
