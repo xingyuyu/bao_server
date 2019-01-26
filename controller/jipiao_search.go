@@ -20,6 +20,7 @@ type WeiXinReceiveMsg struct {
 	MsgType      Cdata    `xml:"MsgType"`
 	Content      Cdata    `xml:"Content"`
 	MsgId        Cdata    `xml:"MsgId"`
+	Event        Cdata    `xml:"Event"`
 }
 
 type Cdata struct {
@@ -45,6 +46,13 @@ type SemanticsResult struct {
 
 func HandleSearch(reqBody *string) []byte {
 	weixinReceive := parseReqParam(*reqBody)
+	//回复关注信息
+	if weixinReceive.MsgType.Value == "event" && weixinReceive.Event.Value == "subscribe" {
+		msg := getSubEvent()
+		resMsg := contructWeiXinResponse(weixinReceive.FromUserName.Value, weixinReceive.ToUserName.Value, *msg)
+		xmlResult := formatWeixinResponse(resMsg)
+		return []byte(*xmlResult)
+	}
 	parseResult, err := parseUserSemantics(weixinReceive.Content.Value, weixinReceive.FromUserName.Value)
 	var msg string
 	var searchInfo []JipiaoInfo
@@ -420,4 +428,9 @@ func ParseTime(inputTime string) (int64, error) {
 	} else {
 		return result.Unix(), nil
 	}
+}
+
+func getSubEvent() *string {
+	str := "亲，您终于来了！新春“送换夺”就差您一个了！\n点击“参与活动”，尽快填写“送换夺卡券”信息，就能最快找到您的聊天宝小伙伴！\n\n登记完毕，在输入框中输入“我“，就可以查询到匹配合适的聊天宝ID，完成新春大挑战。\n机票活动 输入“出发地 到达地 日期”，如“北京 上海 02-01”，可以进行查询。\n无人机活动 输入“无人机 您持有的省份 想交换的省份”，如“无人机 浙江 北京”，可以进行查询。\n三只松鼠活动 输入“坚果 您的尾号 想交换的尾号”，如“坚果 1 9”，可以进行查询。\n电子烟活动 输入“电子烟 您的数字 想交换的数字”，如“电子烟 10 6”，可以进行查询。"
+	return &str
 }
