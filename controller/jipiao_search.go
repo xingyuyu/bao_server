@@ -90,11 +90,11 @@ func HandleSearch(reqBody *string) []byte {
 			break
 		case "do_dianziyan_search":
 			log.Println("do_dianziyan_search=", parseResult)
-			commonInfo = getWurenjiInfo(parseResult.common_info.selfAttr, parseResult.common_info.expectAttr)
+			commonInfo = getDianziyanInfo(parseResult.common_info.selfAttr, parseResult.common_info.expectAttr)
 			break
 		case "do_songshu_search":
 			log.Println("do_songshu_search=", parseResult)
-			commonInfo = getWurenjiInfo(parseResult.common_info.selfAttr, parseResult.common_info.expectAttr)
+			commonInfo = getSongshuInfo(parseResult.common_info.selfAttr, parseResult.common_info.expectAttr)
 			break
 		}
 	} else {
