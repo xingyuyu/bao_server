@@ -64,17 +64,17 @@ func HandleSearch(reqBody *string) []byte {
 	if err == nil {
 		switch parseResult.action {
 		case "do_me_search":
-			log.Println("do_me_search,weixinId=", parseResult.info.weixinId)
-			myInfo := getMeInfoData(parseResult.info.weixinId)
-			myCommonInfo := getMeCommonInfoData(parseResult.info.weixinId)
-			if myInfo == nil {
-				msg = "没查询到您相关的活动信息"
-			} else {
-				searchInfo = getAllInfoData(myInfo.selfCity, myInfo.selfArrive, myInfo.selfTime)
-				meWurenjiInfo = getWurenjiInfo(myCommonInfo[0].selfAttr, myCommonInfo[0].expectAttr)
-				meSongshuInfo = getSongshuInfo(myCommonInfo[1].selfAttr, myCommonInfo[0].expectAttr)
-				meDianziyanInfo = getDianziyanInfo(myCommonInfo[1].selfAttr, myCommonInfo[0].expectAttr)
-			}
+			// log.Println("do_me_search,weixinId=", parseResult.info.weixinId)
+			// myInfo := getMeInfoData(parseResult.info.weixinId)
+			// myCommonInfo := getMeCommonInfoData(parseResult.info.weixinId)
+			// if myInfo == nil {
+			// 	msg = "没查询到您相关的活动信息"
+			// } else {
+			// 	searchInfo = getAllInfoData(myInfo.selfCity, myInfo.selfArrive, myInfo.selfTime)
+			// 	meWurenjiInfo = getWurenjiInfo(myCommonInfo[0].selfAttr, myCommonInfo[0].expectAttr)
+			// 	meSongshuInfo = getSongshuInfo(myCommonInfo[1].selfAttr, myCommonInfo[0].expectAttr)
+			// 	meDianziyanInfo = getDianziyanInfo(myCommonInfo[1].selfAttr, myCommonInfo[0].expectAttr)
+			// }
 			break
 		case "do_expect_city_search":
 			log.Println("getExpectCityData,info=", parseResult)
@@ -133,6 +133,9 @@ func HandleSearch(reqBody *string) []byte {
 		songshuMsg := formatCommonData(meSongshuInfo)
 		msgFormat := "为您查询到得机票信息如下:\n%s\n为您查询到的无人机信息如下:\n%s\n为你查询到的电子烟信息如下:\n%s\n为您查询到的三只松鼠信息如下:\n%s\n"
 		msg = fmt.Sprintf(msgFormat, jipiaoMsg, wurenjiMsg, dianziyanMsg, songshuMsg)
+	} else if parseResult.action == "do_err" {
+		errFormat := "您输入了我无法识别的指令哟，请重新输入。我们的规则如下\n%s"
+		msg = fmt.Sprintln(errFormat, getSubEvent())
 	} else {
 		if len(searchInfo) == 0 {
 			msg = "sorry,没查到相关航班信息"
@@ -336,11 +339,7 @@ func parseUserSemantics(semantics string, weixinID string) (*SemanticsResult, er
 	if len(splitArr) > 3 {
 		return &result, errors.New("查不到您输入的信息")
 	} else {
-		if len(splitArr) == 1 && (semantics == "我的" || semantics == "我") {
-			result.action = "do_me_search"
-			result.info.selfCity = splitArr[0]
-			result.info.weixinId = weixinID
-		} else if len(splitArr) == 1 && (strings.Contains(semantics, "-")) {
+		if len(splitArr) == 1 && (strings.Contains(semantics, "-")) {
 			timeStamp, err := ParseTime(semantics)
 			if err != nil {
 				return &result, errors.New("您输入的查询时间不对")
@@ -378,6 +377,8 @@ func parseUserSemantics(semantics string, weixinID string) (*SemanticsResult, er
 			result.action = "do_city_search"
 			result.info.selfCity = splitArr[0]
 			result.info.selfArrive = splitArr[1]
+		} else {
+			result.action = "do_err"
 		}
 		return &result, nil
 	}
@@ -431,6 +432,6 @@ func ParseTime(inputTime string) (int64, error) {
 }
 
 func getSubEvent() *string {
-	str := "亲，您终于来了！新春“送换夺”就差您一个了！\n点击“参与活动”，尽快填写“送换夺卡券”信息，就能最快找到您的聊天宝小伙伴！\n\n登记完毕，在输入框中输入“我“，就可以查询到匹配合适的聊天宝ID，完成新春大挑战。\n机票活动 输入“出发地 到达地 日期”，如“北京 上海 02-01”，可以进行查询。\n无人机活动 输入“无人机 您持有的省份 想交换的省份”，如“无人机 浙江 北京”，可以进行查询。\n三只松鼠活动 输入“坚果 您的尾号 想交换的尾号”，如“坚果 1 9”，可以进行查询。\n电子烟活动 输入“电子烟 您的数字 想交换的数字”，如“电子烟 10 6”，可以进行查询。"
+	str := "亲，您终于来了！新春“送换夺”就差您一个了！\n点击“参与活动”，尽快填写“送换夺卡券”信息，就能最快找到您的聊天宝小伙伴！\n\n登记完毕，在输入框中输入以下规则，就可以查询到匹配合适的聊天宝ID，完成新春大挑战。\n机票活动 输入“出发地 到达地 日期”，如“北京 上海 02-01”，可以进行查询。\n无人机活动 输入“无人机 您持有的省份 想交换的省份”，如“无人机 浙江 北京”，可以进行查询。\n三只松鼠活动 输入“坚果 您的尾号 想交换的尾号”，如“坚果 1 9”，可以进行查询。\n电子烟活动 输入“电子烟 您的数字 想交换的数字”，如“电子烟 10 6”，可以进行查询。"
 	return &str
 }
